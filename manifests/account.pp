@@ -9,12 +9,12 @@ define users::account(
 	$expiry = undef,
 	$gid = undef,
 	$groups = undef,
-	$home = undef,
+	$home = "/home/${name}",
 	$ia_load_module = undef,
 	$iterations = undef,
 	$key_membership = undef,
 	$keys = undef,
-	$managehome = undef,
+	$managehome = true,
 	$membership = 'minimum',
 	$password = undef,
 	$password_max_age = undef,
@@ -31,21 +31,29 @@ define users::account(
 	$uid,
 ) {
 
+	# be aware of this bug: https://projects.puppetlabs.com/issues/19090
+
 	if $gid {
+		$group = $name
 		if is_numeric($gid) {
 			group { $name:
 				gid => $gid,
 			}
 		} else {
+			$group = $gid
 			group { $gid:
 				gid => $uid,
 			}
 		}
 	} else {
+		$group = $name
 		group { $name:
 			gid => $uid,
 		}
 	}
+
+    # force user to be absent before group http://projects.puppetlabs.com/issues/9622
+    User[$name] -> Group[$group]
 
 	user { $name:
 		allowdupe => $allowdupe,
@@ -79,6 +87,16 @@ define users::account(
 		shell => $shell,
 		system => $system,
 		uid => $uid,
+	}
+
+	if $home {
+		file { $home:
+			ensure  => $ensure ? { present => directory, default => $ensure },
+			force   => $true,
+			owner   => $uid,
+			group   => $group,
+			mode    => 0640; # rwx,rx
+		}
 	}
 
 }
