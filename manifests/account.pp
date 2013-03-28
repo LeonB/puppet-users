@@ -89,7 +89,7 @@ define users::account(
 		uid => $uid,
 	}
 
-	if $home {
+	if $home and !defined(File[$home]) {
 		file { $home:
 			ensure  => $ensure ? { present => directory, default => $ensure },
 			force   => $true,
